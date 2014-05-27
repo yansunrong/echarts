@@ -932,13 +932,20 @@ define(function (require) {
             symbol = this.deepQuery(queryTarget, 'symbol') || 'circle';
             symbol = symbol.replace('empty', '').replace(/\d/g, '');
             
+            var devicePixelRatio = window.devicePixelRatio || 1;
+            
             //console.log(data)
             itemShape = new SymbolShape({
                 style : {
                     pointList : data,
                     color : color,
+                    strokeColor: color,
+                    shadowColor : color,
+                    shadowBlur : 8 * devicePixelRatio,
                     size : this.deepQuery(queryTarget, 'symbolSize'),
-                    symbol : symbol
+                    iconType : symbol,
+                    brushType: 'fill',
+                    lineWidth:1
                 },
                 draggable : false,
                 hoverable : false
@@ -1153,7 +1160,8 @@ define(function (require) {
             this.effectList.push(effectShape);
             this.zr.addShape(effectShape);
             
-            var offset = (effectShape.style.width - shape.style.width) / 2;
+            var devicePixelRatio = window.devicePixelRatio || 1;
+            var offset = (effectShape.style.width / devicePixelRatio - shape.style.width) / 2;
             effectShape.style.x = shape.style.x - offset;
             effectShape.style.y = shape.style.y - offset;
             var duration = (effect.period + Math.random() * 10) * 100;
@@ -1163,8 +1171,8 @@ define(function (require) {
                 { invisible : true}
             );
             
-            var centerX = effectShape.style.x + (effectShape.style.width) /2;
-            var centerY = effectShape.style.y + (effectShape.style.height) / 2;
+            var centerX = effectShape.style.x + (effectShape.style.width) / 2 / devicePixelRatio;
+            var centerY = effectShape.style.y + (effectShape.style.height) / 2 / devicePixelRatio;
             this.zr.modShape(
                 effectShape.id, 
                 {
@@ -1188,19 +1196,19 @@ define(function (require) {
             var size = effect.scaleSize;
             var shadowColor = effect.shadowColor || color;
             var shadowBlur = typeof effect.shadowBlur != 'undefined'
-                             ? effect.shadowBlur : size;
-
+                             ? effect.shadowBlur : size * 2;
+            var devicePixelRatio = window.devicePixelRatio || 1;
             var effectShape = new SymbolShape({
                 zlevel : zlevel,
                 position : shape.position,
                 scale : shape.scale,
                 style : {
                     pointList : shape.style.pointList,
-                    iconType : shape.style.symbol,
+                    iconType : shape.style.iconType,
                     color : color,
                     strokeColor : color,
                     shadowColor : shadowColor,
-                    shadowBlur : shadowBlur,
+                    shadowBlur : shadowBlur * devicePixelRatio,
                     random : true,
                     brushType: 'fill',
                     lineWidth:1,
