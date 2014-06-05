@@ -67,81 +67,111 @@
                 <div class="well sidebar-nav">
                     <div class="nav-header"><a href="#" onclick="autoResize()" class="icon-resize-full" id ="icon-resize" ></a>option</div>
                     <textarea id="code" name="code">
-function random(){
-    var r = Math.round(Math.random() * 100);
-    return (r * (r % 2 == 0 ? 1 : -1));
-}
-
-function randomDataArray() {
-    var d = [];
-    var len = 100;
-    while (len--) {
-        d.push([
-            random(),
-            random(),
-            Math.abs(random()),
-        ]);
-    }
-    return d;
-}
-
 option = {
-    tooltip : {
-        trigger: 'axis',
-        showDelay : 0,
-        axisPointer:{
-            type : 'cross',
-            lineStyle: {
-                type : 'dashed',
-                width : 1
-            }
-        }
+    title : {
+        text : '类目坐标散点图',
+        subtext : 'dataZoom支持'
     },
-    legend: {
-        data:['scatter1','scatter2']
+    tooltip : {
+        trigger: 'item',
+        formatter : function (value) {
+            return value[0] + ' （'  + '类目' + value[2][0] + '）<br/>'
+                   + value[2][1] + ', ' 
+                   + value[2][2]; 
+        }
     },
     toolbox: {
         show : true,
         feature : {
             mark : {show: true},
-            dataZoom : {show: true},
             dataView : {show: true, readOnly: false},
             restore : {show: true},
             saveAsImage : {show: true}
         }
     },
+    dataZoom: {
+        show: true,
+        start : 30,
+        end : 70
+    },
+    legend : {
+        data : ['series1', 'series2']
+    },
+    dataRange: {
+        min: 0,
+        max: 100,
+        orient: 'horizontal',
+        y: 30,
+        x: 'center',
+        //text:['高','低'],           // 文本，默认为数值文本
+        color:['lightgreen','orange'],
+        splitNumber: 5
+    },
     xAxis : [
         {
-            type : 'value',
-            power: 1,
-            splitNumber: 4,
-            scale: true
+            type : 'category',
+            axisLabel: {
+                formatter : function(v) {
+                    return '类目' + v
+                }
+            },
+            data : function (){
+                var list = [];
+                var len = 0;
+                while (len++ < 500) {
+                    list.push(len);
+                }
+                return list;
+            }()
         }
     ],
     yAxis : [
         {
             type : 'value',
-            power: 1,
-            splitNumber: 4,
-            scale: true
+            splitArea : {show : true}
         }
     ],
+    animation: false,
     series : [
         {
-            name:'scatter1',
+            name:'series1',
             type:'scatter',
             symbolSize: function (value){
-                return Math.round(value[2] / 5);
+                return Math.round(value[2]/10);
             },
-            data: randomDataArray()
+            data: (function () {
+                var d = [];
+                var len = 0;
+                var value;
+                while (len++ < 500) {
+                    d.push([
+                        len,
+                        (Math.random()*30).toFixed(2) - 0,
+                        (Math.random()*100).toFixed(2) - 0
+                    ]);
+                }
+                return d;
+            })()
         },
         {
-            name:'scatter2',
+            name:'series2',
             type:'scatter',
             symbolSize: function (value){
-                return Math.round(value[2] / 5);
+                return Math.round(value[2]/10);
             },
-            data: randomDataArray()
+            data: (function () {
+                var d = [];
+                var len = 0;
+                var value;
+                while (len++ < 500) {
+                    d.push([
+                        len,
+                        (Math.random()*30).toFixed(2) - 0,
+                        (Math.random()*100).toFixed(2) - 0
+                    ]);
+                }
+                return d;
+            })()
         }
     ]
 };

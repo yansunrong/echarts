@@ -244,7 +244,8 @@ define(function (require) {
                 size : size,
                 xAxisIndex : xAxisIndex,
                 yAxisIndex : yAxisIndex,
-                seriesIndex : zoomSeriesIndex
+                seriesIndex : zoomSeriesIndex,
+                scatterMap : this._zoom.scatterMap || {}
             };
         },
 
@@ -287,10 +288,12 @@ define(function (require) {
             var axisOption = zrUtil.clone(this.option.xAxis);
             if (axisOption instanceof Array) {
                 axisOption[0].type = 'value';
-                axisOption[1] && (axisOption[1].type = 'value');
+                axisOption[0].boundary = [0, 0];
+                axisOption[1] && (axisOption[1].type = 'value', axisOption[1].boundary = [0, 0]);
             }
             else {
                 axisOption.type = 'value';
+                axisOption.boundary = [0, 0];
             }
             var vAxis = new Axis(
                 this.ecTheme,
@@ -311,10 +314,11 @@ define(function (require) {
             axisOption = zrUtil.clone(this.option.yAxis);
             if (axisOption instanceof Array) {
                 axisOption[0].type = 'value';
-                axisOption[1] && (axisOption[1].type = 'value');
+                axisOption[1] && (axisOption[1].type = 'value', axisOption[1].boundary = [0, 0]);
             }
             else {
                 axisOption.type = 'value';
+                axisOption.boundary = [0, 0];
             }
             vAxis = new Axis(
                 this.ecTheme,
@@ -736,6 +740,9 @@ define(function (require) {
                 target = this._originalData[key];
                 for (var idx in target) {
                     data = target[idx];
+                    if (typeof data == 'undefined') {
+                        continue;
+                    }
                     length = data.length;
                     start = Math.floor(this._zoom.start / 100 * length);
                     end = Math.ceil(this._zoom.end / 100 * length);
@@ -762,9 +769,9 @@ define(function (require) {
         },
         
         _synScatterData : function (seriesIndex, data) {
-            if (this._zoom.start == 0 
+            if (this._zoom.start === 0 
                 && this._zoom.end == 100
-                && this._zoom.start2 == 0 
+                && this._zoom.start2 === 0 
                 && this._zoom.end2 == 100
             ) {
                 return data;
@@ -1033,11 +1040,12 @@ define(function (require) {
             this.option = magicOption;
             
             this.clear();
-            this._backupData();
             // 位置参数，通过计算所得x, y, width, height
             this._location = this._getLocation();
             // 缩放参数
             this._zoom =  this._getZoom();
+            
+            this._backupData();
             if (this.option.dataZoom && this.option.dataZoom.show) {
                 this._buildShape();
             }
@@ -1051,7 +1059,7 @@ define(function (require) {
         },
         
         getRealDataIndex : function (sIdx, dIdx) {
-            if (!this._originalData || (this._zoom.start == 0 && this._zoom.end == 100)) {
+            if (!this._originalData || (this._zoom.start === 0 && this._zoom.end == 100)) {
                 return dIdx;
             }
             var sreies = this._originalData.series;

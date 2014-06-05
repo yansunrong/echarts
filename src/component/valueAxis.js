@@ -24,9 +24,9 @@ define(function (require) {
      * @param {Object} component 组件
      * @param {Array} series 数据对象
      */
-    function ValueAxis(ecTheme, messageCenter, zr, option, myChart, series) {
+    function ValueAxis(ecTheme, messageCenter, zr, option, myChart, axisBase, series) {
         if (!series || series.length === 0) {
-            console.err('option.series.length == 0.')
+            console.err('option.series.length == 0.');
             return;
         }
         
@@ -34,6 +34,10 @@ define(function (require) {
 
         this.series = series;
         this.grid = this.component.grid;
+        
+        for (var method in axisBase) {
+            this[method] = axisBase[method];
+        }
         
         this.refresh(option, series);
     }
@@ -57,85 +61,6 @@ define(function (require) {
             }
         },
 
-        // 轴线
-        _buildAxisLine : function () {
-            var lineWidth = this.option.axisLine.lineStyle.width;
-            var halfLineWidth = lineWidth / 2;
-            var axShape = {
-                zlevel : this._zlevelBase + 1,
-                hoverable : false
-            };
-            switch (this.option.position) {
-                case 'left' :
-                    axShape.style = {
-                        xStart : this.grid.getX() - halfLineWidth,
-                        yStart : this.grid.getYend() + halfLineWidth,
-                        xEnd : this.grid.getX() - halfLineWidth,
-                        yEnd : this.grid.getY() - halfLineWidth
-                    };
-                    break;
-                case 'right' :
-                    axShape.style = {
-                        xStart : this.grid.getXend() + halfLineWidth,
-                        yStart : this.grid.getYend() + halfLineWidth,
-                        xEnd : this.grid.getXend() + halfLineWidth,
-                        yEnd : this.grid.getY() - halfLineWidth
-                    };
-                    break;
-                case 'bottom' :
-                    axShape.style = {
-                        xStart : this.grid.getX() - halfLineWidth,
-                        yStart : this.grid.getYend() + halfLineWidth,
-                        xEnd : this.grid.getXend() + halfLineWidth,
-                        yEnd : this.grid.getYend() + halfLineWidth
-                    };
-                    break;
-                case 'top' :
-                    axShape.style = {
-                        xStart : this.grid.getX() - halfLineWidth,
-                        yStart : this.grid.getY() - halfLineWidth,
-                        xEnd : this.grid.getXend() + halfLineWidth,
-                        yEnd : this.grid.getY() - halfLineWidth
-                    };
-                    break;
-            }
-            if (this.option.name !== '') {
-                axShape.style.text = this.option.name;
-                axShape.style.textPosition = this.option.nameLocation;
-                axShape.style.textFont = this.getFont(this.option.nameTextStyle);
-                if (this.option.nameTextStyle.align) {
-                    axShape.style.textAlign = this.option.nameTextStyle.align;
-                }
-                if (this.option.nameTextStyle.baseline) {
-                    axShape.style.textBaseline = this.option.nameTextStyle.baseline;
-                }
-                if (this.option.nameTextStyle.color) {
-                    axShape.style.textColor = this.option.nameTextStyle.color;
-                }
-            }
-            axShape.style.strokeColor = this.option.axisLine.lineStyle.color;
-            
-            var lineWidth = this.option.axisLine.lineStyle.width;
-            axShape.style.lineWidth = lineWidth;
-            // 亚像素优化
-            if (this.option.position == 'left' || this.option.position == 'right') {
-                // 纵向布局，优化x
-                axShape.style.xStart 
-                    = axShape.style.xEnd 
-                    = this.subPixelOptimize(axShape.style.xEnd, lineWidth);
-            }
-            else {
-                // 横向布局，优化y
-                axShape.style.yStart 
-                    = axShape.style.yEnd 
-                    = this.subPixelOptimize(axShape.style.yEnd, lineWidth);
-            }
-            
-            axShape.style.lineType = this.option.axisLine.lineStyle.type;
-
-            this.shapeList.push(new LineShape(axShape));
-        },
-
         // 小标记
         _buildAxisTick : function () {
             var axShape;
@@ -146,7 +71,7 @@ define(function (require) {
             var color      = tickOption.lineStyle.color;
             var lineWidth  = tickOption.lineStyle.width;
 
-            if (this.option.position == 'bottom' || this.option.position == 'top') {
+            if (this.isHorizontal()) {
                 // 横向
                 var yPosition = this.option.position == 'bottom'
                         ? (tickOption.inside ? (this.grid.getYend() - length) : this.grid.getYend())
@@ -156,6 +81,7 @@ define(function (require) {
                     // 亚像素优化
                     x = this.subPixelOptimize(this.getCoord(data[i]), lineWidth);
                     axShape = {
+                        _axisShape : 'axisTick',
                         zlevel : this._zlevelBase,
                         hoverable : false,
                         style : {
@@ -173,14 +99,15 @@ define(function (require) {
             else {
                 // 纵向
                 var xPosition = this.option.position == 'left'
-                        ? (tickOption.inside ? this.grid.getX() : (this.grid.getX() - length))
-                        : (tickOption.inside ? (this.grid.getXend() - length) : this.grid.getXend());
+                    ? (tickOption.inside ? this.grid.getX() : (this.grid.getX() - length))
+                    : (tickOption.inside ? (this.grid.getXend() - length) : this.grid.getXend());
 
                 var y;
                 for (var i = 0; i < dataLength; i++) {
                     // 亚像素优化
                     y = this.subPixelOptimize(this.getCoord(data[i]), lineWidth);
                     axShape = {
+                        _axisShape : 'axisTick',
                         zlevel : this._zlevelBase,
                         hoverable : false,
                         style : {
@@ -204,9 +131,10 @@ define(function (require) {
             var dataLength = this._valueList.length;
             var rotate     = this.option.axisLabel.rotate;
             var margin     = this.option.axisLabel.margin;
+            var clickable  = this.option.axisLabel.clickable;
             var textStyle  = this.option.axisLabel.textStyle;
 
-            if (this.option.position == 'bottom' || this.option.position == 'top') {
+            if (this.isHorizontal()) {
                 // 横向
                 var yPosition;
                 var baseLine;
@@ -246,7 +174,9 @@ define(function (require) {
                             axShape.style.y
                         ];
                     }
-                    this.shapeList.push(new TextShape(axShape));
+                    this.shapeList.push(new TextShape(
+                        this._axisLabelClickable(clickable, axShape)
+                    ));
                 }
             }
             else {
@@ -291,7 +221,9 @@ define(function (require) {
                             axShape.style.y
                         ];
                     }
-                    this.shapeList.push(new TextShape(axShape));
+                    this.shapeList.push(new TextShape(
+                        this._axisLabelClickable(clickable, axShape)
+                    ));
                 }
             }
         },
@@ -307,7 +239,7 @@ define(function (require) {
             color = color instanceof Array ? color : [color];
             var colorLength = color.length;
 
-            if (this.option.position == 'bottom' || this.option.position == 'top') {
+            if (this.isHorizontal()) {
                 // 横向
                 var sy = this.grid.getY();
                 var ey = this.grid.getYend();
@@ -386,7 +318,7 @@ define(function (require) {
                 var data        = this._valueList;
                 var dataLength  = this._valueList.length;
 
-                if (this.option.position == 'bottom' || this.option.position == 'top') {
+                if (this.isHorizontal()) {
                     // 横向
                     var y = this.grid.getY();
                     var height = this.grid.getHeight();
@@ -612,70 +544,70 @@ define(function (require) {
          *
          * by linzhifeng@baidu.com 2013-1-8
          * --------
-             this._valueList = [];
-             this.option = {splitNumber:5,power:100,precision:0};
-             this._min = 1; this._max = 123; console.log(this._min, this._max); this._reformValue();
-             console.log('result is :', this._min, this._max, this._valueList);
-             console.log('should be : 0 150 [0, 30, 60, 90, 120, 150]',
-                        (this._min == 0 && this._max == 150) ? 'success' : 'failed');
+         this._valueList = [];
+         this.option = {splitNumber:5,power:100,precision:0};
+         this._min = 1; this._max = 123; console.log(this._min, this._max); this._reformValue();
+         console.log('result is :', this._min, this._max, this._valueList);
+         console.log('should be : 0 150 [0, 30, 60, 90, 120, 150]',
+                    (this._min == 0 && this._max == 150) ? 'success' : 'failed');
 
-             this._min = 10; this._max = 1923; console.log(this._min, this._max); this._reformValue();
-             console.log('result is :', this._min, this._max, this._valueList);
-             console.log('should be : 0 2000 [0, 400, 800, 1200, 1600, 2000]',
-                        (this._min == 0 && this._max == 2000) ? 'success' : 'failed');
+         this._min = 10; this._max = 1923; console.log(this._min, this._max); this._reformValue();
+         console.log('result is :', this._min, this._max, this._valueList);
+         console.log('should be : 0 2000 [0, 400, 800, 1200, 1600, 2000]',
+                    (this._min == 0 && this._max == 2000) ? 'success' : 'failed');
 
-             this._min = 10; this._max = 78; console.log(this._min, this._max); this._reformValue();
-             console.log('result is :', this._min, this._max, this._valueList);
-             console.log('should be : 0 100 [0, 20, 40, 60, 80, 100]',
-                        (this._min == 0 && this._max == 100) ? 'success' : 'failed');
+         this._min = 10; this._max = 78; console.log(this._min, this._max); this._reformValue();
+         console.log('result is :', this._min, this._max, this._valueList);
+         console.log('should be : 0 100 [0, 20, 40, 60, 80, 100]',
+                    (this._min == 0 && this._max == 100) ? 'success' : 'failed');
 
-             this._min = -31; this._max = -3; console.log(this._min, this._max); this._reformValue();
-             console.log('result is :', this._min, this._max, this._valueList);
-             console.log('should be : -35 0 [-35, -28, -21, -14, -7, 0]',
-                        (this._min == -35 && this._max == 0) ? 'success' : 'failed');
+         this._min = -31; this._max = -3; console.log(this._min, this._max); this._reformValue();
+         console.log('result is :', this._min, this._max, this._valueList);
+         console.log('should be : -35 0 [-35, -28, -21, -14, -7, 0]',
+                    (this._min == -35 && this._max == 0) ? 'success' : 'failed');
 
-             this._min = -51; this._max = 203; console.log(this._min, this._max); this._reformValue();
-             console.log('result is :', this._min, this._max, this._valueList);
-             console.log('should be : -60 240 [-60, 0, 60, 120, 180, 240]',
-                        (this._min == -60 && this._max == 240) ? 'success' : 'failed');
+         this._min = -51; this._max = 203; console.log(this._min, this._max); this._reformValue();
+         console.log('result is :', this._min, this._max, this._valueList);
+         console.log('should be : -60 240 [-60, 0, 60, 120, 180, 240]',
+                    (this._min == -60 && this._max == 240) ? 'success' : 'failed');
 
-             this._min = -251; this._max = 23; console.log(this._min, this._max); this._reformValue();
-             console.log('result is :', this._min, this._max, this._valueList);
-             console.log('should be : -280 70 [-280, -210, -140, -70, 0, 70]',
-                        (this._min == -280 && this._max == 70) ? 'success' : 'failed');
+         this._min = -251; this._max = 23; console.log(this._min, this._max); this._reformValue();
+         console.log('result is :', this._min, this._max, this._valueList);
+         console.log('should be : -280 70 [-280, -210, -140, -70, 0, 70]',
+                    (this._min == -280 && this._max == 70) ? 'success' : 'failed');
 
-             this.option.precision = 2;
-             this._min = 0.23; this._max = 0.78; console.log(this._min, this._max); this._reformValue();
-             console.log('result is :', this._min, this._max, this._valueList);
-             console.log('should be : 0.00 1.00'
-                 + '["0.00", "0.20", "0.40", "0.60", "0.80", "1.00"]',
-                (this._min == 0.00 && this._max == 1.00) ? 'success' : 'failed');
+         this.option.precision = 2;
+         this._min = 0.23; this._max = 0.78; console.log(this._min, this._max); this._reformValue();
+         console.log('result is :', this._min, this._max, this._valueList);
+         console.log('should be : 0.00 1.00'
+             + '["0.00", "0.20", "0.40", "0.60", "0.80", "1.00"]',
+            (this._min == 0.00 && this._max == 1.00) ? 'success' : 'failed');
 
-             this._min = -12.23; this._max = -0.78; console.log(this._min, this._max);
-             this._reformValue();
-             console.log('result is :', this._min, this._max, this._valueList);
-             console.log('should be : -15.00 0.00'
-                 + '["-15.00", "-12.00", "-9.00", "-6.00", "-3.00", "0.00"]',
-                (this._min == -15.00 && this._max == 0.00) ? 'success' : 'failed');
+         this._min = -12.23; this._max = -0.78; console.log(this._min, this._max);
+         this._reformValue();
+         console.log('result is :', this._min, this._max, this._valueList);
+         console.log('should be : -15.00 0.00'
+             + '["-15.00", "-12.00", "-9.00", "-6.00", "-3.00", "0.00"]',
+            (this._min == -15.00 && this._max == 0.00) ? 'success' : 'failed');
 
-             this._min = -0.23; this._max = 0.78; console.log(this._min, this._max); this._reformValue();
-             console.log('result is :', this._min, this._max, this._valueList);
-             console.log('should be : -0.30 1.20'
-                 + '["-0.30", "0.00", "0.30", "0.60", "0.90", "1.20"]',
-                (this._min == -0.30 && this._max == 1.20) ? 'success' : 'failed');
+         this._min = -0.23; this._max = 0.78; console.log(this._min, this._max); this._reformValue()
+         console.log('result is :', this._min, this._max, this._valueList);
+         console.log('should be : -0.30 1.20'
+             + '["-0.30", "0.00", "0.30", "0.60", "0.90", "1.20"]',
+            (this._min == -0.30 && this._max == 1.20) ? 'success' : 'failed');
 
-             this._min = -1.23; this._max = 0.78; console.log(this._min, this._max); _reformValue();
-             console.log('result is :', this._min, this._max, this._valueList);
-             console.log('should be : -1.50 1.00'
-                 + '["-1.50", "-1.00", "-0.50", "0.00", "0.50", "1.00"]',
-                (this._min == -1.50 && this._max == 1.00) ? 'success' : 'failed');
+         this._min = -1.23; this._max = 0.78; console.log(this._min, this._max); _reformValue();
+         console.log('result is :', this._min, this._max, this._valueList);
+         console.log('should be : -1.50 1.00'
+             + '["-1.50", "-1.00", "-0.50", "0.00", "0.50", "1.00"]',
+            (this._min == -1.50 && this._max == 1.00) ? 'success' : 'failed');
 
-             this.option.precision = 1;
-             this._min = -2.3; this._max = 0.5; console.log(this._min, this._max); _reformValue();
-             console.log('result is :', this._min, this._max, this._valueList);
-             console.log('should be : -2.4 0.6'
-                 + '["-2.4", "-1.8", "-1.2", "-0.6", "0.0", "0.6"]',
-                (this._min == -2.4 && this._max == 0.6) ? 'success' : 'failed');
+         this.option.precision = 1;
+         this._min = -2.3; this._max = 0.5; console.log(this._min, this._max); _reformValue();
+         console.log('result is :', this._min, this._max, this._valueList);
+         console.log('should be : -2.4 0.6'
+             + '["-2.4", "-1.8", "-1.2", "-0.6", "0.0", "0.6"]',
+            (this._min == -2.4 && this._max == 0.6) ? 'success' : 'failed');
          * --------
          */
         _reformValue : function (scale) {
@@ -856,18 +788,20 @@ define(function (require) {
             value = value < this._min ? this._min : value;
             value = value > this._max ? this._max : value;
 
-            var valueRange = this._max - this._min;
-            var total;
             var result;
-            if (this.option.position == 'left' || this.option.position == 'right') {
+            if (!this.isHorizontal()) {
                 // 纵向
-                total = this.grid.getHeight();
-                result = this.grid.getYend() - (value - this._min) / valueRange * total;
+                result = this.grid.getYend() 
+                         - (value - this._min) 
+                           / (this._max - this._min) 
+                           * this.grid.getHeight();
             }
             else {
                 // 横向
-                total = this.grid.getWidth();
-                result = (value - this._min) / valueRange * total + this.grid.getX();
+                result = this.grid.getX() 
+                         + (value - this._min) 
+                           / (this._max - this._min) 
+                           * this.grid.getWidth();
             }
 
             return result;
@@ -881,7 +815,7 @@ define(function (require) {
         
         // 根据值换算绝对大小
         getCoordSize : function (value) {
-            if (this.option.position == 'left' || this.option.position == 'right') {
+            if (!this.isHorizontal()) {
                 // 纵向
                 return Math.abs(value / (this._max - this._min) * this.grid.getHeight());
             }
@@ -890,9 +824,30 @@ define(function (require) {
                 return Math.abs(value / (this._max - this._min) * this.grid.getWidth());
             }
         },
-
-        getPosition : function () {
-            return this.option.position;
+        
+        // 根据位置换算值
+        getValueFromCoord : function(coord) {
+            var result;
+            if (!this.isHorizontal()) {
+                // 纵向
+                coord = coord < this.grid.getY() ? this.grid.getY() : coord;
+                coord = coord > this.grid.getYend() ? this.grid.getYend() : coord;
+                result = this._max 
+                         - (coord - this.grid.getY()) 
+                           / this.grid.getHeight() 
+                           * (this._max - this._min);
+            }
+            else {
+                // 横向
+                coord = coord < this.grid.getX() ? this.grid.getX() : coord;
+                coord = coord > this.grid.getXend() ? this.grid.getXend() : coord;
+                result = this._min 
+                         + (coord - this.grid.getX()) 
+                           / this.grid.getWidth() 
+                           * (this._max - this._min);
+            }
+            
+            return result.toFixed(2) - 0;
         }
     };
 

@@ -50,8 +50,10 @@ define(function() {
         title: {
             text: '',
             //link: null,              // 超链接跳转
+            //target: null,            // 仅支持self | blank
             subtext: '',
             //sublink: null,           // 超链接跳转
+            //subtarget: null,         // 仅支持self | blank
             x: 'left',                 // 水平安放位置，默认为左对齐，可选为：
                                        // 'center' ¦ 'left' ¦ 'right'
                                        // ¦ {number}（x坐标，单位px）
@@ -128,6 +130,7 @@ define(function() {
             calculable: false,         // 是否值域漫游，启用后无视splitNumber，线性渐变
             realtime: true,
             color:['#006edd','#e0ffff'],//颜色 
+            //formatter: null,
             //text:['高','低'],           // 文本，默认为数值文本
             textStyle: {
                 color: '#333'          // 值域文字颜色
@@ -228,9 +231,15 @@ define(function() {
                     width: 2,
                     type: 'solid'
                 },
-                areaStyle : {                       // 阴影指示器样式设置
-                    size: 'auto',                   // 阴影大小
-                    color: 'rgba(150,150,150,0.3)'  // 阴影颜色
+                crossStyle: {
+                    color: '#1e90ff',
+                    width: 1,
+                    type: 'dashed'
+                },
+                shadowStyle : {                     // 阴影指示器样式设置
+                    color: 'rgba(150,150,150,0.3)', // 阴影颜色
+                    width: 'auto',                  // 阴影大小
+                    type: 'default'
                 }
             },
             textStyle: {
@@ -283,6 +292,7 @@ define(function() {
             boundaryGap: true,     // 类目起始和结束两端空白策略
             axisLine: {            // 坐标轴线
                 show: true,        // 默认显示，属性show控制显示与否
+                onZero: true,
                 lineStyle: {       // 属性lineStyle控制线条样式
                     color: '#48b',
                     width: 2,
@@ -305,6 +315,7 @@ define(function() {
                 interval: 'auto',
                 rotate: 0,
                 margin: 8,
+                // clickable: false,
                 // formatter: null,
                 textStyle: {       // 其余属性默认使用全局文本样式，详见TEXTSTYLE
                     color: '#333'
@@ -343,6 +354,7 @@ define(function() {
             splitNumber: 5,        // 分割段数，默认为5
             axisLine: {            // 坐标轴线
                 show: true,        // 默认显示，属性show控制显示与否
+                onZero: true,
                 lineStyle: {       // 属性lineStyle控制线条样式
                     color: '#48b',
                     width: 2,
@@ -362,6 +374,7 @@ define(function() {
                 show: true,
                 rotate: 0,
                 margin: 8,
+                // clickable: false,
                 // formatter: null,
                 textStyle: {       // 其余属性默认使用全局文本样式，详见TEXTSTYLE
                     color: '#333'
@@ -717,12 +730,12 @@ define(function() {
         
         map: {
             mapType: 'china',   // 各省的mapType暂时都用中文
-            mapLocation: {
-                x : 'center',
-                y : 'center'
+            //mapLocation: {
+                // x : 'center' | 'left' | 'right' | 'x%' | {number},
+                // y : 'center' | 'top' | 'bottom' | 'x%' | {number}
                 // width    // 自适应
                 // height   // 自适应
-            },
+            //},
             // mapValueCalculation: 'sum', // 数值合并方式，默认加和，可选为：
                                            // 'sum' | 'average' | 'max' | 'min' 
             mapValuePrecision : 0,         // 地图数值计算结果小数精度
@@ -730,6 +743,7 @@ define(function() {
             // selectedMode: false,        // 选择模式，默认关闭，可选single，multiple
             hoverable: true,
             // roam : false,               // 是否开启缩放及漫游模式
+            // scaleLimit : null,
             itemStyle: {
                 normal: {
                     // color: 各异,
@@ -998,6 +1012,7 @@ define(function() {
             TOOLTIP_OUT_GRID: 'tooltipOutGrid'
         },
         DRAG_ENABLE_TIME : 120,   // 降低图表内元素拖拽敏感度，单位ms，不建议外部干预
+        EFFECT_ZLEVEL : 7,
         // 主题，默认标志图形类型列表
         symbolList : [
           'circle', 'rectangle', 'triangle', 'diamond',

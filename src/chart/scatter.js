@@ -7,7 +7,7 @@
  */
 define(function (require) {
     var ComponentBase = require('../component/base');
-    var CalculableBase = require('./calculableBase');
+    var ChartBase = require('./base');
     
     // 图形依赖
     var SymbolShape = require('../util/shape/Symbol');
@@ -31,8 +31,8 @@ define(function (require) {
     function Scatter(ecTheme, messageCenter, zr, option, myChart){
         // 基类
         ComponentBase.call(this, ecTheme, messageCenter, zr, option, myChart);
-        // 可计算特性装饰
-        CalculableBase.call(this);
+        // 图表基类
+        ChartBase.call(this);
 
         this.refresh(option);
     }
@@ -49,6 +49,7 @@ define(function (require) {
             this._sIndex2ShapeMap = {};  // series图形类型，seriesIndex索引到_symbol
             
             this.selectedMap = {};
+            this.xMarkMap = {};
             
             var legend = this.component.legend;
             var seriesArray = [];
@@ -168,14 +169,10 @@ define(function (require) {
                     ]);
                     
                 }
-                this.buildMark(
-                    serie,
-                    seriesIndex,
-                    this.component,
-                    {
-                        xMarkMap : this._markMap(xAxis, yAxis, serie.data, pointList[seriesIndex])
-                    }
-                );
+                this.xMarkMap[seriesIndex] = this._markMap(
+                    xAxis, yAxis, serie.data, pointList[seriesIndex]
+                ); 
+                this.buildMark(seriesIndex);
             }
             
             // console.log(pointList)
@@ -375,7 +372,9 @@ define(function (require) {
         },
         
         // 位置转换
-        getMarkCoord : function (serie, seriesIndex, mpData, markCoordParams) {
+        getMarkCoord : function (seriesIndex, mpData) {
+            var serie = this.series[seriesIndex];
+            var xMarkMap = this.xMarkMap[seriesIndex];
             var xAxis = this.component.xAxis.getAxis(serie.xAxisIndex);
             var yAxis = this.component.yAxis.getAxis(serie.yAxisIndex);
             var pos;
@@ -388,10 +387,10 @@ define(function (require) {
                 var valueIndex = typeof mpData.valueIndex != 'undefined'
                                  ? mpData.valueIndex : 1;
                 pos = [
-                    markCoordParams.xMarkMap[mpData.type + 'X' + valueIndex],
-                    markCoordParams.xMarkMap[mpData.type + 'Y' + valueIndex],
-                    markCoordParams.xMarkMap[mpData.type + 'Line' + valueIndex],
-                    markCoordParams.xMarkMap[mpData.type + valueIndex]
+                    xMarkMap[mpData.type + 'X' + valueIndex],
+                    xMarkMap[mpData.type + 'Y' + valueIndex],
+                    xMarkMap[mpData.type + 'Line' + valueIndex],
+                    xMarkMap[mpData.type + valueIndex]
                 ];
             }
             else {
@@ -436,7 +435,7 @@ define(function (require) {
         }
     };
     
-    zrUtil.inherits(Scatter, CalculableBase);
+    zrUtil.inherits(Scatter, ChartBase);
     zrUtil.inherits(Scatter, ComponentBase);
     
     // 图表注册

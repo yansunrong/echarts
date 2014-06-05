@@ -7,7 +7,7 @@
  */
 define(function (require) {
     var ComponentBase = require('../component/base');
-    var CalculableBase = require('./calculableBase');
+    var ChartBase = require('./base');
     
     // 图形依赖
     var CandleShape = require('../util/shape/Candle');
@@ -30,8 +30,8 @@ define(function (require) {
     function K(ecTheme, messageCenter, zr, option, myChart){
         // 基类
         ComponentBase.call(this, ecTheme, messageCenter, zr, option, myChart);
-        // 可计算特性装饰
-        CalculableBase.call(this);
+        // 图表基类
+        ChartBase.call(this);
 
         this.refresh(option);
     }
@@ -84,7 +84,6 @@ define(function (require) {
          * @param {number} seriesIndex 系列索引
          */
         _buildSinglePosition : function (position, seriesArray) {
-            var series = this.series;
             var mapData = this._mapData(seriesArray);
             var locationMap = mapData.locationMap;
             var maxDataLength = mapData.maxDataLength;
@@ -95,11 +94,7 @@ define(function (require) {
             this._buildHorizontal(seriesArray, maxDataLength, locationMap);
 
             for (var i = 0, l = seriesArray.length; i < l; i++) {
-                this.buildMark(
-                    series[seriesArray[i]],
-                    seriesArray[i],
-                    this.component
-                );
+                this.buildMark(seriesArray[i]);
             }
         },
 
@@ -230,7 +225,7 @@ define(function (require) {
 
             var seriesIndex;
             for (var sIdx = 0, len = seriesArray.length; sIdx < len; sIdx++) {
-                seriesIndex = seriesArray[sIdx]
+                seriesIndex = seriesArray[sIdx];
                 serie = series[seriesIndex];
                 seriesPL = pointList[seriesIndex];
                 
@@ -420,7 +415,8 @@ define(function (require) {
         },
 
         // 位置转换
-        getMarkCoord : function (serie, seriesIndex, mpData) {
+        getMarkCoord : function (seriesIndex, mpData) {
+            var serie = this.series[seriesIndex];
             var xAxis = this.component.xAxis.getAxis(serie.xAxisIndex);
             var yAxis = this.component.yAxis.getAxis(serie.yAxisIndex);
             
@@ -499,7 +495,7 @@ define(function (require) {
         }
     };
     
-    zrUtil.inherits(K, CalculableBase);
+    zrUtil.inherits(K, ChartBase);
     zrUtil.inherits(K, ComponentBase);
     
     // 图表注册

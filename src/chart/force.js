@@ -9,7 +9,7 @@ define(function (require) {
     'use strict';
     
     var ComponentBase = require('../component/base');
-    var CalculableBase = require('./calculableBase');
+    var ChartBase = require('./base');
     
     // 图形依赖
     var CircleShape = require('zrender/shape/Circle');
@@ -44,8 +44,8 @@ define(function (require) {
     function Force(ecTheme, messageCenter, zr, option, myChart) {
         // 基类
         ComponentBase.call(this, ecTheme, messageCenter, zr, option, myChart);
-        // 可计算特性装饰
-        CalculableBase.call(this);
+        // 图表基类
+        ChartBase.call(this);
 
         var component = myChart.component;
         var legend;
@@ -130,11 +130,7 @@ define(function (require) {
                     if (!self.selectedMap[serieName]) {
                         continue;
                     }
-                    self.buildMark(
-                        series[i],
-                        i,
-                        component
-                    );
+                    self.buildMark(i);
                     
                     forceSerie = serie;
 
@@ -368,12 +364,12 @@ define(function (require) {
                 }
                 
                 // 拖拽特性
-				if (forceSerie.draggable) {
-	                self.setCalculable(shape);
-	                shape.dragEnableTime = 0;
-	                shape.ondragstart = self.shapeHandler.ondragstart;
-	                shape.draggable = forceSerie.draggable;
-				}
+                if (forceSerie.draggable) {
+                    self.setCalculable(shape);
+                    shape.dragEnableTime = 0;
+                    shape.ondragstart = self.shapeHandler.ondragstart;
+                    shape.draggable = forceSerie.draggable;
+                }
                 
                 var categoryName = '';
                 if (typeof(node.category) !== 'undefined') {
@@ -852,7 +848,7 @@ define(function (require) {
         return result;
     }
     
-    zrUtil.inherits(Force, CalculableBase);
+    zrUtil.inherits(Force, ChartBase);
     zrUtil.inherits(Force, ComponentBase);
     
     // 图表注册

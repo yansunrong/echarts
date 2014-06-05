@@ -34,7 +34,6 @@
  */
 define(function (require) {
     var Base = require('zrender/shape/Base');
-    var matrix = require('zrender/tool/matrix');
     var zrUtil = require('zrender/tool/util');
     var _ctx = zrUtil.getContext();
     
@@ -100,22 +99,9 @@ define(function (require) {
             if (!_ctx.isPointInPath) {  // In ie
                 return false;
             }
-            //对鼠标的坐标也做相同的变换
-            if(this.needTransform && this._transform){
-                var inverseMatrix = [];
-                matrix.invert(inverseMatrix, this._transform);
-
-                var originPos = [x, y];
-                matrix.mulVector(originPos, inverseMatrix, [x, y, 1]);
-
-                if (x == originPos[0] && y == originPos[1]) {
-                    // 避免外部修改导致的__needTransform不准确
-                    this.updateNeedTransform();
-                }
-
-                x = originPos[0];
-                y = originPos[1];
-            }
+            var originPos = this.getTansform(x, y);
+            x = originPos[0];
+            y = originPos[1];
             
             _ctx.beginPath();
             ChordShape.prototype.buildPath.call(null, _ctx, this.style);

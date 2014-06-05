@@ -8,7 +8,7 @@
 
  define(function (require) {
     var ComponentBase = require('../component/base');
-    var CalculableBase = require('./calculableBase');
+    var ChartBase = require('./base');
     
      // 图形依赖
     var PolygonShape = require('zrender/shape/Polygon');
@@ -30,8 +30,8 @@
     function Radar(ecTheme, messageCenter, zr, option, myChart) {
         // 基类
         ComponentBase.call(this, ecTheme, messageCenter, zr, option, myChart);
-        // 可计算特性装饰
-        CalculableBase.call(this);
+        // 图表基类
+        ChartBase.call(this);
 
         this.refresh(option);
     }
@@ -67,11 +67,7 @@
                             this._addDropBox(i);
                         }
                         this._buildSingleRadar(i);
-                        this.buildMark(
-                            series[i],
-                            i,
-                            this.component
-                        );
+                        this.buildMark(i);
                     }
                 }
             }
@@ -123,7 +119,7 @@
 
                 pointList = this._getPointList(this.serie.polarIndex, data[i]);
                 // 添加拐点形状
-                this._addSymbol(pointList, defaultColor, i, index);
+                this._addSymbol(pointList, defaultColor, i, index, this.serie.polarIndex);
                 // 添加数据形状
                 this._addDataShape(
                     pointList, defaultColor, data[i],
@@ -145,7 +141,12 @@
             var polar = this.component.polar;
 
             for (var i = 0, l = dataArr.value.length; i < l; i++) {
-                vector = polar.getVector(polarIndex, i, dataArr.value[i]);
+                vector = polar.getVector(
+                    polarIndex, 
+                    i, 
+                    typeof dataArr.value[i].value != 'undefined'
+                    ? dataArr.value[i].value : dataArr.value[i]
+                );
                 if (vector) {
                     pointList.push(vector);
                 } 
@@ -160,13 +161,19 @@
          * @param {object} data 数据
          * @param {number} serieIndex
          */
-        _addSymbol : function (pointList, defaultColor, dataIndex, seriesIndex) {
+        _addSymbol : function (pointList, defaultColor, dataIndex, seriesIndex, polarIndex) {
             var series = this.series;
             var itemShape;
+            var polar = this.component.polar;
+
             for (var i = 0, l = pointList.length; i < l; i++) {
                 itemShape = this.getSymbolShape(
-                    series[seriesIndex], seriesIndex, 
-                    series[seriesIndex].data[dataIndex], dataIndex, '', 
+                    this.deepMerge(
+                        [series[seriesIndex].data[dataIndex], series[seriesIndex]]
+                    ),
+                    seriesIndex, 
+                    series[seriesIndex].data[dataIndex].value[i], i,
+                    polar.getIndicatorText(polarIndex, i),
                     pointList[i][0],    // x
                     pointList[i][1],    // y
                     this._symbol[this._radarDataCounter % this._symbol.length],
@@ -175,6 +182,9 @@
                     'vertical'
                 );
                 itemShape.zlevel = this._zlevelBase + 1;
+                ecData.set(itemShape, 'data', series[seriesIndex].data[dataIndex]);
+                ecData.set(itemShape, 'value', series[seriesIndex].data[dataIndex].value);
+                ecData.set(itemShape, 'dataIndex', dataIndex);
                 ecData.set(itemShape, 'special', i);
                 this.shapeList.push(itemShape);
             }
@@ -404,7 +414,7 @@
         }
     };
     
-    zrUtil.inherits(Radar, CalculableBase);
+    zrUtil.inherits(Radar, ChartBase);
     zrUtil.inherits(Radar, ComponentBase);
     
     // 图表注册

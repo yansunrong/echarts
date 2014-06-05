@@ -19,7 +19,6 @@ define(function (require) {
     var ecConfig = require('../config');
     var zrUtil = require('zrender/tool/util');
     var zrArea = require('zrender/tool/area');
-    var zrColor = require('zrender/tool/color');
 
     /**
      * 构造函数
@@ -29,11 +28,16 @@ define(function (require) {
      */
     function Legend(ecTheme, messageCenter, zr, option, myChart) {
         if (!this.query(option, 'legend.data')) {
-            console.error('option.legend.data has not been defined.')
+            console.error('option.legend.data has not been defined.');
             return;
         }
         
         Base.call(this, ecTheme, messageCenter, zr, option, myChart);
+        
+        var self = this;
+        self._legendSelected = function (param) {
+            self.__legendSelected(param);
+        };
         
         this._colorIndex = 0;
         this._colorMap = {};
@@ -60,7 +64,6 @@ define(function (require) {
          * 构建所有图例元素
          */
         _buildItem : function () {
-            var self = this;
             var data = this.legendOption.data;
             var dataLength = data.length;
             var itemName;
@@ -80,9 +83,7 @@ define(function (require) {
             var itemGap = this.legendOption.itemGap;
             var color;
 
-            if (this.legendOption.orient == 'vertical'
-                && this.legendOption.x == 'right'
-            ) {
+            if (this.legendOption.orient == 'vertical' && this.legendOption.x == 'right') {
                 lastX = this._itemGroupLocation.x
                         + this._itemGroupLocation.width
                         - itemWidth;
@@ -103,27 +104,22 @@ define(function (require) {
                     }
                     else {
                         this.legendOption.x == 'right'
-                        ? lastX -= this._itemGroupLocation.maxWidth + itemGap
-                        : lastX += this._itemGroupLocation.maxWidth + itemGap;
+                            ? lastX -= this._itemGroupLocation.maxWidth + itemGap
+                            : lastX += this._itemGroupLocation.maxWidth + itemGap;
                         lastY = this._itemGroupLocation.y;
                     }
                     continue;
                 }
-                itemType = this._getSomethingByName(itemName).type;
+                itemType = data[i].icon || this._getSomethingByName(itemName).type;
                 
                 color = this.getColor(itemName);
 
                 if (this.legendOption.orient == 'horizontal') {
                     if (zrWidth - lastX < 200   // 最后200px做分行预判
-                        && (itemWidth + 5
-                            + zrArea.getTextWidth(
-                                itemName, 
-                                dataFont
-                            )
+                        && (itemWidth + 5 + zrArea.getTextWidth(itemName, dataFont)
                             // 分行的最后一个不用算itemGap
-                            + (i == dataLength - 1 || data[i+1] === ''
-                               ? 0 : itemGap))
-                            >= zrWidth - lastX
+                            + (i == dataLength - 1 || data[i+1] === '' ? 0 : itemGap)
+                           ) >= zrWidth - lastX
                     ) {
                         lastX = this._itemGroupLocation.x;
                         lastY += itemHeight + itemGap;
@@ -133,9 +129,8 @@ define(function (require) {
                     if (zrHeight - lastY < 200   // 最后200px做分行预判
                         && (itemHeight
                             // 分行的最后一个不用算itemGap
-                            + (i == dataLength - 1 || data[i+1] === ''
-                               ? 0 : itemGap))
-                            >= zrHeight - lastY
+                            + (i == dataLength - 1 || data[i+1] === '' ? 0 : itemGap)
+                           ) >= zrHeight - lastY
                     ) {
                         this.legendOption.x == 'right'
                         ? lastX -= this._itemGroupLocation.maxWidth + itemGap
@@ -161,13 +156,13 @@ define(function (require) {
                     zlevel : this._zlevelBase,
                     style : {
                         x : lastX + itemWidth + 5,
-                        y : lastY,
+                        y : lastY + itemHeight / 2,
                         color : this._selectedMap[itemName]
                                 ? (dataTextStyle.color === 'auto' ? color : dataTextStyle.color)
                                 : '#ccc',
                         text: itemName,
                         textFont: dataFont,
-                        textBaseline: 'top'
+                        textBaseline: 'middle'
                     },
                     highlightStyle : {
                         color : color,
@@ -188,9 +183,7 @@ define(function (require) {
                 textShape = new TextShape(textShape);
                 
                 if (this.legendOption.selectedMode) {
-                    itemShape.onclick = textShape.onclick = function (param) {
-                        self._legendSelected(param);
-                    };
+                    itemShape.onclick = textShape.onclick = this._legendSelected;
                     itemShape.onmouseover =  textShape.onmouseover = this.hoverConnect;
                     itemShape.hoverConnect = textShape.id;
                     textShape.hoverConnect = itemShape.id;
@@ -262,8 +255,7 @@ define(function (require) {
                     continue;
                 }
                 else {
-                    this.shapeList[i].style.x += 
-                        lineOffsetArray[curLineIndex];
+                    this.shapeList[i].style.x += lineOffsetArray[curLineIndex];
                 }
             }
         },
@@ -282,8 +274,7 @@ define(function (require) {
                     y : this._itemGroupLocation.y - pTop,
                     width : this._itemGroupLocation.width + pLeft + pRight,
                     height : this._itemGroupLocation.height + pTop + pBottom,
-                    brushType : this.legendOption.borderWidth === 0
-                                ? 'fill' : 'both',
+                    brushType : this.legendOption.borderWidth === 0 ? 'fill' : 'both',
                     color : this.legendOption.backgroundColor,
                     strokeColor : this.legendOption.borderColor,
                     lineWidth : this.legendOption.borderWidth
@@ -497,10 +488,7 @@ define(function (require) {
         },
         
         _getItemShapeByType : function (x, y, width, height, color, itemType, defaultColor) {
-            var highlightColor = color === '#ccc' 
-                                 ? defaultColor 
-                                 : typeof color == 'string' && color != '#ccc' 
-                                   ? zrColor.lift(color, -0.3) : color;
+            var highlightColor = color === '#ccc' ? defaultColor : color;
             var itemShape = {
                 zlevel : this._zlevelBase,
                 style : {
@@ -521,6 +509,14 @@ define(function (require) {
                 hoverable : this.legendOption.selectedMode,
                 clickable : this.legendOption.selectedMode
             };
+            
+            var imageLocation;
+            if (itemType.match('image')) {
+                var imageLocation = itemType.replace(
+                    new RegExp('^image:\\/\\/'), ''
+                );
+                itemType = 'image';
+            }
             // 特殊设置
             switch (itemType) {
                 case 'line' :
@@ -535,19 +531,25 @@ define(function (require) {
                     itemShape.style.brushType = 'both';
                     itemShape.highlightStyle.lineWidth = 3;
                     itemShape.highlightStyle.color =
-                    itemShape.style.color = this.query(
-                        this.ecTheme, 'k.itemStyle.normal.color'
-                    ) || '#fff';
+                    itemShape.style.color = this.query(this.ecTheme, 'k.itemStyle.normal.color') 
+                                            || '#fff';
                     itemShape.style.strokeColor = color != '#ccc' 
-                        ? this.query(
-                              this.ecTheme, 'k.itemStyle.normal.lineStyle.color'
-                          ) || '#ff3200'
+                        ? (this.query(this.ecTheme, 'k.itemStyle.normal.lineStyle.color') 
+                           || '#ff3200')
                         : color;
+                    break;
+                case 'image' :
+                    itemShape.style.iconType = 'image';
+                    itemShape.style.image = imageLocation;
+                    if (color === '#ccc') {
+                        itemShape.style.opacity = 0.5;
+                    }
+                    break;
             }
             return itemShape;
         },
 
-        _legendSelected : function (param) {
+        __legendSelected : function (param) {
             var itemName = param.target._name;
             if (this.legendOption.selectedMode === 'single') {
                 for (var k in this._selectedMap) {
@@ -603,7 +605,6 @@ define(function (require) {
                         if (something.data
                             && (something.type == ecConfig.CHART_TYPE_PIE
                                 || something.type == ecConfig.CHART_TYPE_FORCE)
-                            
                         ) {
                             queryTarget = [something.data, something.series];
                         }
@@ -612,9 +613,7 @@ define(function (require) {
                         }
                         
                         color = this.getItemStyleColor(
-                            this.deepQuery(
-                                queryTarget, 'itemStyle.normal.color'
-                            ),
+                            this.deepQuery(queryTarget, 'itemStyle.normal.color'),
                             something.seriesIndex,
                             something.dataIndex,
                             something.data
@@ -751,7 +750,7 @@ define(function (require) {
             }
             return;
         }
-    }
+    };
     
     var legendIcon = {
         line : function (ctx, style) {
@@ -759,6 +758,7 @@ define(function (require) {
             ctx.moveTo(style.x,     style.y + dy);
             ctx.lineTo(style.x + style.width,style.y + dy);
         },
+        
         pie : function (ctx, style) {
             var x = style.x;
             var y = style.y;
@@ -772,7 +772,8 @@ define(function (require) {
                 startAngle : 45,
                 endAngle : 135
             });
-        }, 
+        },
+        
         chord : function (ctx, style) {
             var x = style.x;
             var y = style.y;
@@ -802,6 +803,7 @@ define(function (require) {
             });
             ctx.lineTo(x, y + height);
         },
+        
         k : function (ctx, style) {
             var x = style.x;
             var y = style.y;
@@ -813,6 +815,7 @@ define(function (require) {
                 width : width - 6
             });
         },
+        
         bar : function (ctx, style) {
             var x = style.x;
             var y = style.y +1;
@@ -836,9 +839,11 @@ define(function (require) {
             ctx.lineTo(x, y + r);
             ctx.quadraticCurveTo(x, y, x + r, y);
         },
+        
         force : function (ctx, style) {
             IconShape.prototype.iconLibrary.circle(ctx, style);
         },
+        
         radar: function (ctx, style) {
             var n = 6;
             var x = style.x + style.width / 2;

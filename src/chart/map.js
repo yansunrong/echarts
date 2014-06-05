@@ -7,7 +7,7 @@
  */
 define(function (require) {
     var ComponentBase = require('../component/base');
-    var CalculableBase = require('./calculableBase');
+    var ChartBase = require('./base');
     
     // 图形依赖
     var TextShape = require('zrender/shape/Text');
@@ -36,8 +36,8 @@ define(function (require) {
     function Map(ecTheme, messageCenter, zr, option, myChart){
         // 基类
         ComponentBase.call(this, ecTheme, messageCenter, zr, option, myChart);
-        // 可计算特性装饰
-        CalculableBase.call(this);
+        // 图表基类
+        ChartBase.call(this);
         
         var self = this;
         self._onmousewheel = function(param){
@@ -147,7 +147,7 @@ define(function (require) {
                     }
                     
                     valueCalculation[mapType] = valueCalculation[mapType] 
-                                               || series[i].mapValueCalculation;
+                                                || series[i].mapValueCalculation;
                     
                     seriesName = series[i].name;
                     this.selectedMap[seriesName] = legend
@@ -522,7 +522,7 @@ define(function (require) {
             //上下左右留空
             var padding = Math.round(Math.min(zrWidth, zrHeight) * 0.02);
             for (var key in mapSeries) {
-                mapLocation = series[key].mapLocation;
+                mapLocation = series[key].mapLocation || {};
                 cusX = mapLocation.x || cusX;
                 cusY = mapLocation.y || cusY;
                 width = mapLocation.width || width;
@@ -536,18 +536,14 @@ define(function (require) {
             y = this.parsePercent(cusY, zrHeight);
             y = isNaN(y) ? padding : y;
             if (typeof width == 'undefined') {
-                width = isNaN(cusX) 
-                        ? zrWidth - 2 * padding
-                        : zrWidth - x - 2 * padding;
+                width = zrWidth - x - 2 * padding;
             }
             else {
                 width = this.parsePercent(width, zrWidth);
             }
             
             if (typeof height == 'undefined') {
-                height = isNaN(cusY) 
-                         ? zrHeight - 2 * padding
-                         : zrHeight - y - 2 * padding;
+                height = zrHeight - y - 2 * padding;
             }
             else {
                 height = this.parsePercent(height, zrHeight);
@@ -574,6 +570,7 @@ define(function (require) {
             //height = mapHeight * minScale;
             
             if (isNaN(cusX)) {
+                cusX = cusX || 'center';
                 switch (cusX + '') {
                     case 'center' :
                         x = Math.floor((zrWidth - width) / 2);
@@ -582,13 +579,12 @@ define(function (require) {
                         x = zrWidth - width;
                         break;
                     //case 'left' :
-                    default:
                         //x = padding;
-                        break;
                 }
             }
             //console.log(cusX,x,zrWidth,width,'kener')
             if (isNaN(cusY)) {
+                cusY = cusY || 'center';
                 switch (cusY + '') {
                     case 'center' :
                         y = Math.floor((zrHeight - height) / 2);
@@ -597,9 +593,7 @@ define(function (require) {
                         y = zrHeight - height;
                         break;
                     //case 'top' :
-                    default:
                         //y = padding;
-                        break;
                 }
             }
             //console.log(x,y,width,height)
@@ -733,7 +727,6 @@ define(function (require) {
                 style.lineJoin = highlightStyle.lineJoin = 'round';
                 style._name = highlightStyle._name = name;
                 
-                
                 font = this.deepQuery(queryTarget, 'itemStyle.normal.label.textStyle');
                 // 文字标签避免覆盖单独一个shape
                 textShape = {
@@ -857,35 +850,32 @@ define(function (require) {
         
         // 添加标注
         _buildMark : function (mapType, mapSeries) {
-            var series = this.series;
+            this._seriesIndexToMapType = this._seriesIndexToMapType || {};
+            this.markAttachStyle = this.markAttachStyle || {};
             var position = [
                 this._mapDataMap[mapType].transform.left,
                 this._mapDataMap[mapType].transform.top
             ];
             for (var sIdx in mapSeries) {
-                this.buildMark(
-                    series[sIdx],
-                    sIdx,
-                    this.component,
-                    {
-                        mapType : mapType
-                    },
-                    {
-                        position : position,
-                        _mapType : mapType
-                    }
-                );
+                this._seriesIndexToMapType[sIdx] = mapType;
+                this.markAttachStyle[sIdx] = {
+                    position : position,
+                    _mapType : mapType
+                };
+                this.buildMark(sIdx);
             }
         },
         
         // 位置转换
-        getMarkCoord : function (serie, seriesIndex, mpData, markCoordParams) {
+        getMarkCoord : function (seriesIndex, mpData) {
             return (mpData.geoCoord || _geoCoord[mpData.name])
                    ? this.geo2pos(
-                         markCoordParams.mapType, mpData.geoCoord || _geoCoord[mpData.name]
+                         this._seriesIndexToMapType[seriesIndex], 
+                         mpData.geoCoord || _geoCoord[mpData.name]
                      )
                    : [0, 0];
         },
+        
         getMarkGeo : function(name) {
             return _geoCoord[name];
         },
@@ -998,7 +988,7 @@ define(function (require) {
                 transform.top -= geoAndPos[1] - (my - top);
                 this._mapDataMap[mapType].transform = transform;
                 
-                this.clearAnimationShape(true);
+                this.clearEffectShape(true);
                 for (var i = 0, l = this.shapeList.length; i < l; i++) {
                     if(this.shapeList[i]._mapType == mapType) {
                         this.shapeList[i].position[0] = transform.left;
@@ -1114,7 +1104,7 @@ define(function (require) {
                 {type : 'move'}
             );
             
-            this.clearAnimationShape(true);
+            this.clearEffectShape(true);
             this.zr.refresh();
             
             this._justMove = true;
@@ -1139,7 +1129,7 @@ define(function (require) {
          * 点击响应 
          */
         onclick : function (param) {
-            if (!this.isClick || !param.target || this._justMove) {
+            if (!this.isClick || !param.target || this._justMove || param.target.type == 'icon') {
                 // 没有在当前实例上发生点击直接返回
                 return;
             }
@@ -1148,6 +1138,7 @@ define(function (require) {
             var name = target.style._name;
             var len = this.shapeList.length;
             var mapType = target._mapType || '';
+            
             if (this._selectedMode[mapType] == 'single') {
                 for (var p in this._selected) {
                     // 同一地图类型
@@ -1319,7 +1310,7 @@ define(function (require) {
         }
     };
     
-    zrUtil.inherits(Map, CalculableBase);
+    zrUtil.inherits(Map, ChartBase);
     zrUtil.inherits(Map, ComponentBase);
     
     // 图表注册
